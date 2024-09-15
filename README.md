@@ -3,7 +3,7 @@ Live chat.
 
 # Demo:
 
-![DEMO](image-1.png)
+Later
 
 ## To run this project:
 
