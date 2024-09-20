@@ -13,10 +13,22 @@ wss.on("connection", (ws) => {
   ws.send(JSON.stringify(messages));
 
   ws.on("message", (rawMessage) => {
-    const { name, userMessage } = JSON.parse(rawMessage);
-    messages.push({ name, userMessage });
-    for (const id in clients) {
-      clients[id].send(JSON.stringify([{ name, userMessage }]));
+    const data = JSON.parse(rawMessage);
+
+    if (data.type === "message") {
+      const { name, userMessage } = data;
+      messages.push({ name, userMessage });
+      for (const clientId in clients) {
+        clients[clientId].send(JSON.stringify([{ name, userMessage }]));
+      }
+    } else if (data.type === "typing") {
+      for (const clientId in clients) {
+        if (clientId !== id) {
+          clients[clientId].send(
+            JSON.stringify({ type: "typing", name: data.name })
+          );
+        }
+      }
     }
   });
 

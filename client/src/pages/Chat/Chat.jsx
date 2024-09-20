@@ -17,8 +17,9 @@ import { useNavigate } from "react-router-dom";
 export default function Chat() {
   const [message, setMessage] = useState("");
   const [allMessages, setAllMessages] = useState([]);
-  const [ws, setWs] = useState("");
+  const [ws, setWs] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
   const { userInfo, isAuth } = useMain();
   const navigate = useNavigate();
 
@@ -36,12 +37,34 @@ export default function Chat() {
     }
   };
 
+  const handleTyping = () => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "typing", name: userInfo.name }));
+    }
+  };
+
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:8000");
 
     socket.onmessage = (event) => {
-      const messages = JSON.parse(event.data);
-      setAllMessages((prevMessages) => [...prevMessages, ...messages]);
+      const data = JSON.parse(event.data);
+
+      if (Array.isArray(data)) {
+        setAllMessages((prevMessages) => [...prevMessages, ...data]);
+      } else if (data.type === "typing") {
+        setTypingUsers((prevTypingUsers) => {
+          if (!prevTypingUsers.includes(data.name)) {
+            return [...prevTypingUsers, data.name];
+          }
+          return prevTypingUsers;
+        });
+
+        setTimeout(() => {
+          setTypingUsers((prevTypingUsers) =>
+            prevTypingUsers.filter((user) => user !== data.name)
+          );
+        }, 3000);
+      }
     };
 
     setWs(socket);
@@ -57,18 +80,20 @@ export default function Chat() {
     }
   }, [navigate, isAuth]);
 
-  const send = (event) => {
+  const send = () => {
     if (message.length === 0) {
       return;
     }
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(
         JSON.stringify({
+          type: "message",
           name: userInfo.name,
           userMessage: message,
         })
       );
       setMessage("");
+      setShowEmojiPicker(false);
     } else {
       console.error("WebSocket is not connected");
     }
@@ -84,7 +109,12 @@ export default function Chat() {
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden">
             <div className="h-full">
-              <Messages allMessages={allMessages} userName={userInfo.name}/>
+              <Messages allMessages={allMessages} userName={userInfo.name} />
+              {typingUsers.length > 0 && (
+                <div className="mb-2 ml-2 text-sm text-gray-500">
+                  {typingUsers.join(", ")} is typing...
+                </div>
+              )}
             </div>
           </CardContent>
 
@@ -92,7 +122,10 @@ export default function Chat() {
             <Input
               className="w-full"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                handleTyping();
+              }}
               onKeyUp={handleKeyUp}
               maxLength={250}
             />

@@ -17,11 +17,12 @@ export default function Messages({ allMessages, userName }) {
     <div className="flex flex-col gap-2 h-full overflow-y-auto scrollbar px-5 py-2">
       {allMessages.map(({ name, userMessage }, index) => {
         const isMe = userName === name ? "ml-auto" : "mr-auto";
-        console.log(isMe);
         return (
           <div key={index} className={`flex flex-col gap-1 ${isMe}`}>
             <Label className={`${isMe}`}>{capitalizeFirstLetter(name)}</Label>
-            <span className="border rounded-lg p-2 max-w-[900px] break-words">{userMessage}</span>
+            <span className="border text-center rounded-lg p-2 max-w-[900px] break-words bg-gray-200">
+              {userMessage}
+            </span>
           </div>
         );
       })}
